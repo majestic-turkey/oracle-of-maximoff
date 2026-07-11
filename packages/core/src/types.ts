@@ -12,6 +12,6 @@ export interface Doc {
 }
 
 export interface Token {
-  term: string
+  token: string
   position: number
 }

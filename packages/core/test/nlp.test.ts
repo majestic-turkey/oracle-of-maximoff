@@ -1,16 +1,11 @@
+/// <reference types="node" />
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
-import { Stemmer } from '../src/nlp.ts'
+import analyze, { Stemmer, tokenize, filterStopwords } from '../src/nlp.ts'
 
-// The step methods are `private` in TypeScript, but that is a compile-time
-// fiction — the JS methods exist on the instance. Reach them at runtime so each
-// step can be exercised in isolation. Calling a not-yet-implemented step
-// (step3/4/5) throws, which is the intended "red" for an unbuilt step.
 const stemmer = new Stemmer()
 type StepFn = (w: string) => string
-// Resolve the method *lazily*, inside the returned closure, so a step that
-// hasn't been written yet fails as an individual, clearly-labeled test rather
-// than throwing at collection time and collapsing the whole block.
+
 const priv = (name: string): StepFn => (w: string) => {
   const fn = (stemmer as unknown as Record<string, unknown>)[name]
   if (typeof fn !== 'function') {
@@ -19,9 +14,6 @@ const priv = (name: string): StepFn => (w: string) => {
   return (fn as StepFn).call(stemmer, w)
 }
 
-// Expected values below come from the canonical Porter algorithm spec, not from
-// the current implementation — so genuine bugs surface as failures rather than
-// being encoded as "correct".
 const cases = (fn: StepFn, pairs: [string, string][]) => {
   for (const [input, expected] of pairs) {
     test(`${input} -> ${expected}`, () => {
@@ -31,7 +23,6 @@ const cases = (fn: StepFn, pairs: [string, string][]) => {
   }
 }
 
-// Quote/JSON-encode so undefined, '', and whitespace differences are visible.
 const show = (v: unknown): string => (v === undefined ? 'undefined' : JSON.stringify(v))
 
 describe('stem() — short-circuit & lowercasing', () => {
@@ -97,18 +88,14 @@ describe('step1b', () => {
     ['bled', 'bled'],
     ['motoring', 'motor'],
     ['sing', 'sing'],
-    // -at / -bl / -iz  =>  + e
     ['conflated', 'conflate'],
     ['troubled', 'trouble'],
     ['sized', 'size'],
-    // *d and not (*L or *S or *Z) => single letter
     ['hopping', 'hop'],
     ['tanned', 'tan'],
-    // double L/S/Z is kept
     ['falling', 'fall'],
     ['hissing', 'hiss'],
     ['fizzed', 'fizz'],
-    // m=1 and *o  =>  + e
     ['filing', 'file'],
     ['failing', 'fail'],
   ])
@@ -146,8 +133,6 @@ describe('step2', () => {
   ])
 })
 
-// ---- Not yet implemented: these blocks stay red until you build the step ----
-
 describe('step3', () => {
   cases(priv('step3'), [
     ['triplicate', 'triplic'],
@@ -173,7 +158,7 @@ describe('step4', () => {
     ['replacement', 'replac'],
     ['adjustment', 'adjust'],
     ['dependent', 'depend'],
-    ['adoption', 'adopt'], // -ion only after s or t
+    ['adoption', 'adopt'],
     ['homologou', 'homolog'],
     ['communism', 'commun'],
     ['activate', 'activ'],
@@ -188,14 +173,14 @@ describe('step5', () => {
   describe('5a (final -e)', () => {
     cases(priv('step5'), [
       ['probate', 'probat'],
-      ['rate', 'rate'], // kept: m=1 and *o (cvc)
+      ['rate', 'rate'],
       ['cease', 'ceas'],
     ])
   })
   describe('5b (final double L)', () => {
     cases(priv('step5'), [
       ['controll', 'control'],
-      ['roll', 'roll'], // kept: m is not > 1
+      ['roll', 'roll'],
     ])
   })
 })
@@ -210,8 +195,123 @@ describe('stem() end-to-end', () => {
     ['motoring', 'motor'],
     ['sing', 'sing'],
     ['meetings', 'meet'],
-    ['agreed', 'agre'], // step1b -> "agree", then step5a strips the final e (m=1, not *o)
+    ['agreed', 'agre'],
     ['troubles', 'troubl'],
     ['controlling', 'control'],
   ])
+})
+
+
+type Tok = { token: string; position: number }
+
+const expectTokens = (actual: Tok[], expected: [string, number][]) => {
+  const want: Tok[] = expected.map(([token, position]) => ({ token, position }))
+  assert.deepEqual(actual, want, `got ${JSON.stringify(actual)}, expected ${JSON.stringify(want)}`)
+}
+
+describe('tokenize()', () => {
+  describe('M1 behavior', () => {
+    test('lowercases (case folding)', () => {
+      expectTokens(tokenize('Hello WORLD'), [['hello', 0], ['world', 1]])
+    })
+    test('single word -> one token at position 0', () => {
+      expectTokens(tokenize('cat'), [['cat', 0]])
+    })
+    test('assigns sequential positions', () => {
+      expectTokens(tokenize('the quick brown fox'), [
+        ['the', 0], ['quick', 1], ['brown', 2], ['fox', 3],
+      ])
+    })
+    test('collapses internal whitespace runs', () => {
+      expectTokens(tokenize('a  b\tc'), [['a', 0], ['b', 1], ['c', 2]])
+    })
+    test('keeps numerals as tokens', () => {
+      expectTokens(tokenize('iron man 3'), [['iron', 0], ['man', 1], ['3', 2]])
+    })
+  })
+
+  describe('Post-M1 behavior', () => {
+    test('strips surrounding punctuation', () => {
+      expectTokens(tokenize('hello,'), [['hello', 0]])
+      expectTokens(tokenize('(hi)'), [['hi', 0]])
+      expectTokens(tokenize('cat.'), [['cat', 0]])
+    })
+    test('empty string yields no tokens', () => {
+      expectTokens(tokenize(''), [])
+    })
+    test('leading/trailing whitespace yields no empty tokens', () => {
+      expectTokens(tokenize('  hi  '), [['hi', 0]])
+    })
+  })
+
+  describe('Token boundaries', () => {
+    test('hyphenated: "state-of-the-art" (split vs keep TBD)', { todo: true })
+    test('apostrophes: "don\'t", "O\'Brien" (TBD)', { todo: true })
+    test('symbols: "C#", "C++" (TBD)', { todo: true })
+    test('non-ASCII / Unicode folding: "café", "naïve" (TBD)', { todo: true })
+  })
+})
+
+describe('filterStopwords()', () => {
+  test('removes stopwords, preserving surviving tokens\' positions', () => {
+    expectTokens(filterStopwords([{ token: 'the', position: 0 }, { token: 'cat', position: 1 }]), [
+      ['cat', 1],
+    ])
+  })
+  test('keeps content words unchanged', () => {
+    expectTokens(filterStopwords([{ token: 'cat', position: 0 }, { token: 'run', position: 1 }]), [
+      ['cat', 0], ['run', 1],
+    ])
+  })
+  test('removal is case-insensitive', () => {
+    expectTokens(filterStopwords([{ token: 'The', position: 0 }, { token: 'Cat', position: 1 }]), [
+      ['Cat', 1],
+    ])
+  })
+  test('preserves original positions (gaps) after filtering', () => {
+    expectTokens(
+      filterStopwords([
+        { token: 'the', position: 0 },
+        { token: 'quick', position: 1 },
+        { token: 'and', position: 2 },
+        { token: 'brown', position: 3 },
+      ]),
+      [['quick', 1], ['brown', 3]],
+    )
+  })
+  test('all-stopwords input -> empty', () => {
+    expectTokens(filterStopwords([{ token: 'the', position: 0 }, { token: 'a', position: 1 }]), [])
+  })
+  test('empty input -> empty', () => {
+    expectTokens(filterStopwords([]), [])
+  })
+  test('stopword-list sanity: common words removed, content words kept', () => {
+    const toks = ['the', 'a', 'is', 'cat', 'run'].map((token, position) => ({ token, position }))
+    expectTokens(filterStopwords(toks), [['cat', 3], ['run', 4]])
+  })
+})
+
+describe('analyze() — end-to-end pipeline', () => {
+  describe('M1 behavior', () => {
+    test('lowercases, drops stopwords, keeps original positions', () => {
+      expectTokens(analyze('This test sentence is a test'), [
+        ['test', 1], ['sentence', 2], ['test', 5],
+      ])
+    })
+  })
+
+  describe('Post-M1 behavior', () => {
+    test('strips punctuation across the pipeline', () => {
+      expectTokens(analyze('The cat sat.'), [['cat', 1], ['sat', 2]])
+    })
+    test('empty input yields no tokens', () => {
+      expectTokens(analyze(''), [])
+    })
+  })
+
+  describe('Design choices that may conflict later', () => {
+    test('stems terms when stemming is enabled (reuses Stemmer)', { todo: true })
+    test('query and document text produce identical token streams', { todo: true })
+    test('emitted token key aligns with the Token interface (term vs token)', { todo: true })
+  })
 })

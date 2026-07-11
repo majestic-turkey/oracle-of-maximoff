@@ -7,7 +7,7 @@ export default function analyze(text: string): {
     return filteredTokens
 }
 
-function tokenize(text: string): {
+export function tokenize(text: string): {
     token: string
     position: number
 }[] {
@@ -16,7 +16,7 @@ function tokenize(text: string): {
     return tokens
 }
 
-function filterStopwords(tokens: { token: string; position: number }[]): { token: string; position: number }[] {
+export function filterStopwords(tokens: { token: string; position: number }[]): { token: string; position: number }[] {
     return tokens.filter(({ token }) => !stopwords.includes(token.toLowerCase()))
 }
 
