@@ -244,10 +244,21 @@ describe('tokenize()', () => {
     })
   })
 
-  describe('Token boundaries', () => {
-    test('hyphenated: "state-of-the-art" (split vs keep TBD)', { todo: true })
-    test('apostrophes: "don\'t", "O\'Brien" (TBD)', { todo: true })
-    test('symbols: "C#", "C++" (TBD)', { todo: true })
+  describe('RED — nasty inputs: split on non-alphanumeric', () => {
+    test('splits hyphenated compounds', () => {
+      expectTokens(tokenize('state-of-the-art'), [
+        ['state', 0], ['of', 1], ['the', 2], ['art', 3],
+      ])
+      expectTokens(tokenize('co-operate'), [['co', 0], ['operate', 1]])
+    })
+    test('splits on apostrophes (contraction remnants become their own tokens)', () => {
+      expectTokens(tokenize("don't"), [['don', 0], ['t', 1]])
+      expectTokens(tokenize("O'Brien"), [['o', 0], ['brien', 1]])
+    })
+  })
+
+  describe('TODO — decisions still open in plan.md', () => {
+    test('symbols: "C#", "C++" (collapse to "c" vs special-case, TBD)', { todo: true })
     test('non-ASCII / Unicode folding: "café", "naïve" (TBD)', { todo: true })
   })
 })
