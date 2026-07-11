@@ -24,9 +24,15 @@ const priv = (name: string): StepFn => (w: string) => {
 // being encoded as "correct".
 const cases = (fn: StepFn, pairs: [string, string][]) => {
   for (const [input, expected] of pairs) {
-    test(`${input} -> ${expected}`, () => assert.equal(fn(input), expected))
+    test(`${input} -> ${expected}`, () => {
+      const actual = fn(input)
+      assert.equal(actual, expected, `${input}: got ${show(actual)}, expected ${show(expected)}`)
+    })
   }
 }
+
+// Quote/JSON-encode so undefined, '', and whitespace differences are visible.
+const show = (v: unknown): string => (v === undefined ? 'undefined' : JSON.stringify(v))
 
 describe('stem() — short-circuit & lowercasing', () => {
   test('words shorter than 3 chars are returned lowercased, unchanged', () => {
@@ -48,24 +54,27 @@ describe('helpers (foundational)', () => {
       ['troubles', 2], ['private', 2], ['oaten', 2], ['orrery', 2],
     ] as [string, number][]) {
       test(`m(${word}) = ${m}`, () => {
-        assert.equal((measure as unknown as (w: string) => number)(word), m)
+        const actual = (measure as unknown as (w: string) => number)(word)
+        assert.equal(actual, m, `m(${word}): got ${actual}, expected ${m}`)
       })
     }
   })
 
   describe('cvc', () => {
     const isCvc = cvc as unknown as (w: string) => boolean
+    const cvcCase = (word: string, expected: boolean) =>
+      assert.equal(isCvc(word), expected, `cvc(${word}): got ${isCvc(word)}, expected ${expected}`)
     test('true for consonant-vowel-consonant endings', () => {
-      assert.equal(isCvc('hop'), true)
-      assert.equal(isCvc('fil'), true)
+      cvcCase('hop', true)
+      cvcCase('fil', true)
     })
     test('false when final consonant is w, x, or y', () => {
-      assert.equal(isCvc('bow'), false)
-      assert.equal(isCvc('box'), false)
-      assert.equal(isCvc('bay'), false)
+      cvcCase('bow', false)
+      cvcCase('box', false)
+      cvcCase('bay', false)
     })
     test('false when the pattern is not C-V-C', () => {
-      assert.equal(isCvc('fail'), false)
+      cvcCase('fail', false)
     })
   })
 })
@@ -201,7 +210,7 @@ describe('stem() end-to-end', () => {
     ['motoring', 'motor'],
     ['sing', 'sing'],
     ['meetings', 'meet'],
-    ['agreed', 'agree'],
+    ['agreed', 'agre'], // step1b -> "agree", then step5a strips the final e (m=1, not *o)
     ['troubles', 'troubl'],
     ['controlling', 'control'],
   ])

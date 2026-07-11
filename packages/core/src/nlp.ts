@@ -43,7 +43,7 @@ export class Stemmer {
     private isConsonant(word: string, index: number): boolean {
         const char = word[index]
 
-        switch(char) {
+        switch (char) {
             case "a":
             case "e":
             case "i":
@@ -57,24 +57,33 @@ export class Stemmer {
         }
     }
 
-    private measure(word: string): number {
+    private measure(word: string): number { // Measure number of VC sequences in the word
         let m = 0
         let i = 0
+        const length = word.length
 
-        while (i < word.length && this.isConsonant(word, i)) {
+        // Skip initial consonants
+        while (i < length && this.isConsonant(word, i)) {
             i++
         }
 
-        while (i < word.length) {
-            while (i < word.length && !this.isConsonant(word, i)) {
-                i++
-            }
-            while (i < word.length && this.isConsonant(word, i)) {
+        while (i < length) {
+            // Skip vowel sequences (VV)
+            while (i < length && !this.isConsonant(word, i)) {
                 i++
             }
 
-            if (i < word.length) {
-                m++
+            // End at the end of the word
+            if (i >= length) {
+                break
+            }
+
+            // We now have a consonant following a vowel, so we have a VC sequence
+            m++
+
+            // Skip consonant sequences (CC)
+            while (i < length && this.isConsonant(word, i)) {
+                i++
             }
         }
 
@@ -161,22 +170,29 @@ export class Stemmer {
     }
 
     private step4(word: string): string {
-        if (this.measure(word) > 1) {
-            for (const suffix of STEP4) {
-                if (word.endsWith(suffix)) {
-                    const stem = word.slice(0, -suffix.length)
-                    if (suffix === "ion") {
-                        if (stem.endsWith("s") || stem.endsWith("t")) {
-                            return stem
-                        }
-                    } else {
-                        return stem
-                    }
-                }
+        for (const suffix of STEP4) {
+            if (!word.endsWith(suffix)) {
+                continue
             }
+
+            const stem = word.slice(0, -suffix.length)
+
+            if (this.measure(stem) <= 1) {
+                continue
+            }
+            if (
+                suffix === "ion" &&
+                !stem.endsWith("s") && 
+                !stem.endsWith("t")
+            ) {
+                continue
+            }
+            return stem
         }
+
         return word
     }
+
 
     private step5(word: string): string {
         // Step 5a
@@ -191,7 +207,7 @@ export class Stemmer {
         if (this.measure(word) > 1 && this.endsWithDoubleConsonant(word) && word.endsWith("l")) {
             return word.slice(0, -1)
         }
-        
+
         return word
     }
 
@@ -339,56 +355,56 @@ const stopwords = [
 ]
 
 const STEP2: { [key: string]: string } = {
-  "ational": "ate",
-  "tional": "tion",
-  "enci": "ence",
-  "anci": "ance",
-  "izer": "ize",
-  "abli": "able",
-  "alli": "al",
-  "entli": "ent",
-  "eli": "e",
-  "ousli": "ous",
-  "ization": "ize",
-  "ation": "ate",
-  "ator": "ate",
-  "alism": "al",
-  "iveness": "ive",
-  "fulness": "ful",
-  "ousness": "ous",
-  "aliti": "al",
-  "iviti": "ive",
-  "biliti": "ble",
+    "ational": "ate",
+    "tional": "tion",
+    "enci": "ence",
+    "anci": "ance",
+    "izer": "ize",
+    "abli": "able",
+    "alli": "al",
+    "entli": "ent",
+    "eli": "e",
+    "ousli": "ous",
+    "ization": "ize",
+    "ation": "ate",
+    "ator": "ate",
+    "alism": "al",
+    "iveness": "ive",
+    "fulness": "ful",
+    "ousness": "ous",
+    "aliti": "al",
+    "iviti": "ive",
+    "biliti": "ble",
 }
 
 const STEP3: { [key: string]: string } = {
-  "icate": "ic",
-  "ative": "",
-  "alize": "al",
-  "iciti": "ic",
-  "ical": "ic",
-  "ful": "",
-  "ness": "",
+    "icate": "ic",
+    "ative": "",
+    "alize": "al",
+    "iciti": "ic",
+    "ical": "ic",
+    "ful": "",
+    "ness": "",
 }
 
 const STEP4 = [
-  "al",
-  "ance",
-  "ence",
-  "er",
-  "ic",
-  "able",
-  "ible",
-  "ant",
-  "ement",
-  "ment",
-  "ent",
-  "ion",
-  "ou",
-  "ism",
-  "ate",
-  "iti",
-  "ous",
-  "ive",
-  "ize",
+    "al",
+    "ance",
+    "ence",
+    "er",
+    "ic",
+    "able",
+    "ible",
+    "ant",
+    "ement",
+    "ment",
+    "ent",
+    "ion",
+    "ou",
+    "ism",
+    "ate",
+    "iti",
+    "ous",
+    "ive",
+    "ize",
 ]
