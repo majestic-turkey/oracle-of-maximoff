@@ -17,12 +17,12 @@ export function tokenize(text: string): {
     position: number
 }[] {
     const words = text.split(/\W+/)
-    const tokens = words.map((word, index) => ({ token: word.toLowerCase().trim(), position: index }))
+    const tokens = words.filter(word => word.trim().length > 0).map((word, index) => ({ token: word.toLowerCase().trim(), position: index }))
     return tokens
 }
 
 export function filterStopwords(tokens: { token: string; position: number }[]): { token: string; position: number }[] {
-    return tokens.filter(({ token }) => !stopwords.includes(token.toLowerCase()) && token.trim().length > 0)
+    return tokens.filter(({ token }) => !stopwords.includes(token.toLowerCase()))
 }
 
 // Begin Stemmer logic
