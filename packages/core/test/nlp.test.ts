@@ -257,9 +257,16 @@ describe('tokenize()', () => {
     })
   })
 
-  describe('TODO — decisions still open in plan.md', () => {
-    test('symbols: "C#", "C++" (collapse to "c" vs special-case, TBD)', { todo: true })
-    test('non-ASCII / Unicode folding: "café", "naïve" (TBD)', { todo: true })
+  describe('symbols and Unicode', () => {
+    test('symbols are stripped as non-alphanumeric delimiters', () => {
+      expectTokens(tokenize('C#'), [['c', 0]])
+      expectTokens(tokenize('C++'), [['c', 0]])
+    })
+    test('Unicode letters are preserved, not split on', () => {
+      expectTokens(tokenize('café'), [['café', 0]])
+      expectTokens(tokenize('naïve'), [['naïve', 0]])
+      expectTokens(tokenize('café naïve'), [['café', 0], ['naïve', 1]])
+    })
   })
 })
 
@@ -305,7 +312,7 @@ describe('filterStopwords()', () => {
 describe('analyze() — end-to-end pipeline', () => {
   describe('M1 behavior', () => {
     test('lowercases, drops stopwords, keeps original positions', () => {
-      expectTokens(analyze('This test sentence is a test'), [
+      expectTokens(analyze('This test sentence is a test', false), [
         ['test', 1], ['sentence', 2], ['test', 5],
       ])
     })
@@ -321,8 +328,8 @@ describe('analyze() — end-to-end pipeline', () => {
   })
 
   describe('Design choices that may conflict later', () => {
-    test('stems terms when stemming is enabled (reuses Stemmer)', { todo: true })
-    test('query and document text produce identical token streams', { todo: true })
-    test('emitted token key aligns with the Token interface (term vs token)', { todo: true })
+    test('stems terms when stemming is enabled (reuses Stemmer)')
+    test('query and document text produce identical token streams')
+    test('emitted token key aligns with the Token interface (term vs token)')
   })
 })

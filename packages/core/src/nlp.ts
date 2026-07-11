@@ -1,4 +1,4 @@
-export default function analyze(text: string): {
+export default function analyze(text: string, willStem = true): {
     token: string
     position: number
 }[] {
@@ -9,14 +9,16 @@ export default function analyze(text: string): {
 
     const tokens = tokenize(text)
     const filteredTokens = filterStopwords(tokens)
-    return filteredTokens
+    const stemmer = new Stemmer()
+    const stems = filteredTokens.map(({ token, position }) => ({ token: willStem ? stemmer.stem(token) : token, position }))
+    return stems
 }
 
 export function tokenize(text: string): {
     token: string
     position: number
 }[] {
-    const words = text.split(/\W+/)
+    const words = text.split(/[^\p{L}\p{N}]+/u)
     const tokens = words.filter(word => word.trim().length > 0).map((word, index) => ({ token: word.toLowerCase().trim(), position: index }))
     return tokens
 }
