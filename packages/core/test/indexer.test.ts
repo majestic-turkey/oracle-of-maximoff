@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
-import Indexer from '../src/indexer.ts'
+import Indexer from '../src/tools/indexer.ts'
 
 // Deep-equal with a readable got/expected message.
 const eq = (actual: unknown, expected: unknown) =>

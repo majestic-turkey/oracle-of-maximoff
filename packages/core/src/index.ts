@@ -1,4 +1,4 @@
-import Indexer from './indexer.ts'
+import Indexer from './tools/indexer.ts'
 import { ulysses, ofMiceAndMen, braveNewWorld } from './text.ts'
 
 export { Indexer, ulysses, ofMiceAndMen, braveNewWorld }
