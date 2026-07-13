@@ -50,7 +50,7 @@ const addDocument = db.prepare(`
 
 const documentBatch = db.transaction((docs) => {
     for (const doc of docs) {
-        addDocument.run(doc.title, doc.body, doc.kind, doc.meta, doc.token_count, doc.id)
+        addDocument.run(doc.title, doc.body, doc.kind, doc.meta != null ? JSON.stringify(doc.meta) : null, doc.token_count ?? null, doc.id)
     }
 })
 documentBatch(documents)

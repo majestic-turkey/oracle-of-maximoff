@@ -1,15 +1,13 @@
-import type { Doc } from "../index.ts"
-
-export default function analyze(text: Doc, willStem = true): {
+export default function analyze(text: string, willStem = true): {
     token: string
     position: number
 }[] {
 
-    if (text.body.trim().length === 0) {
+    if (text.trim().length === 0) {
         return []
     }
 
-    const tokens = tokenize(text.body)
+    const tokens = tokenize(text)
     const filteredTokens = filterStopwords(tokens)
     const stemmer = new Stemmer()
     const stems = filteredTokens.map(({ token, position }) => ({ token: willStem ? stemmer.stem(token) : token, position }))
