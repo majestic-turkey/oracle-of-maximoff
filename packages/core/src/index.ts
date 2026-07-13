@@ -1,6 +1,13 @@
-import analyze from './nlp.js'
+import Indexer from './indexer.js'
+import { ulysses, ofMiceAndMen, braveNewWorld } from './text.js'
 
-export * from "./types.js"
-export * from "./nlp.js"
+export { Indexer, ulysses, ofMiceAndMen, braveNewWorld }
+export type { Corpus, Doc, Token } from './types.js'
 
-console.log(analyze("This test sentence is a test"))
+const [text1, text2, text3] = [ulysses, ofMiceAndMen, braveNewWorld]
+const indexer = new Indexer(1)
+
+
+setTimeout(() => console.log(indexer.buildIndex(indexer.analyze(text1))), 2000)
+setTimeout(() => console.log(indexer.buildIndex(indexer.analyze(text2))), 4000)
+setTimeout(() => console.log(indexer.buildIndex(indexer.analyze(text3))), 6000)

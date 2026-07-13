@@ -13,5 +13,6 @@ export interface Doc {
 
 export interface Token {
   token: string
-  position: number
+  positions: number[]
+  docId: number
 }
