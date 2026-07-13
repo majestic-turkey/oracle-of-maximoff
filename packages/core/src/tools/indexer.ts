@@ -78,8 +78,9 @@ export default class Indexer {
     // Just some stats
     stats(): { docCount: number; termCount: number; avgDocLength: number } {
         const totalDocs = this.docIdAndLength.size
-        const totalTokens = Array.from(this.docIdAndLength.values()).reduce((sum, len) => sum + len, 0)
-        const meanTokensPerDoc = totalDocs > 0 ? totalTokens / totalDocs : 0
+        const totalTokens = this.tokensWithDocAndPositions.size
+        const totalLength = Array.from(this.docIdAndLength.values()).reduce((sum, len) => sum + len, 0)
+        const meanTokensPerDoc = totalDocs > 0 ? totalLength / totalDocs : 0
         return { docCount: totalDocs, termCount: totalTokens, avgDocLength: meanTokensPerDoc }
     }
 }
