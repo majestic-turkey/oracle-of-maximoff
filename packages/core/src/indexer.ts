@@ -1,8 +1,8 @@
-import analyze from './nlp.js'
-import type { Token } from './types.js'
+import analyze from './nlp.ts'
+import type { Token } from './types.ts'
 
 // Deduplicate tokens and sort them alphabetically, while also collecting their positions in the text
-function sortTokens(tokens: TokenWithPosition[]): { token: string; positions: number[] }[] {
+function groupAndSortTokens(tokens: TokenWithPosition[]): { token: string; positions: number[] }[] {
     const index: { [token: string]: number[] } = {}
     for (const { token, position } of tokens) {
         if (!index[token]) {
@@ -32,7 +32,7 @@ export default class Indexer {
         if (docIdToUse === undefined) {
             throw new Error('docId must be provided either in the constructor or as an argument to buildIndex')
         }
-        const sortedTokens = sortTokens(tokens)
+        const sortedTokens = groupAndSortTokens(tokens)
         return sortedTokens.map(({ token, positions }) => ({ token, positions, docId: docIdToUse }))
     }
     

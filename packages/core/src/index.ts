@@ -1,8 +1,8 @@
-import Indexer from './indexer.js'
-import { ulysses, ofMiceAndMen, braveNewWorld } from './text.js'
+import Indexer from './indexer.ts'
+import { ulysses, ofMiceAndMen, braveNewWorld } from './text.ts'
 
 export { Indexer, ulysses, ofMiceAndMen, braveNewWorld }
-export type { Corpus, Doc, Token } from './types.js'
+export type { Corpus, Doc, Token } from './types.ts'
 
 const [text1, text2, text3] = [ulysses, ofMiceAndMen, braveNewWorld]
 const indexer = new Indexer()
