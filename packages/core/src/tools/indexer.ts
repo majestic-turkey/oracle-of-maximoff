@@ -1,5 +1,5 @@
 import { Stemmer, analyze } from './nlp.ts'
-import type { Token } from '../types.ts'
+import type { Token, Doc } from '../types.ts'
 
 // Deduplicate tokens and sort them alphabetically, while also collecting their positions in the text
 function groupAndSortTokens(tokens: TokenWithPosition[]): { token: string; positions: number[] }[] {
@@ -29,7 +29,7 @@ export default class Indexer {
     }
 
     // Reduce the text to tokens and their positions in the text
-    analyze(text: string): TokenWithPosition[] {
+    analyze(text: Doc): TokenWithPosition[] {
         return analyze(text, false).map(({ token, position }) => ({ token: this.stemmer.stem(token), position }))
     }
     
@@ -53,7 +53,7 @@ export default class Indexer {
     
     // Index function to analyze the text and build the index in one step
     indexDocument(text: string, docId?: number): Token[] {
-        const tokens = this.analyze(text)
+        const tokens = this.analyze({ id: docId?.toString() ?? '', title: '', body: text, kind: '' })
         return this.buildIndex(tokens, docId)
     }
 
