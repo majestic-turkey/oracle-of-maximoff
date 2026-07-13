@@ -6,28 +6,27 @@ const createDocuments = db.prepare(`
         title TEXT NOT NULL,
         body TEXT NOT NULL,
         kind TEXT NOT NULL,
-        meta TEXT
+        meta TEXT,
+        token_count INTEGER,
+        external_id TEXT NOT NULL UNIQUE
     )
 `)
 
 const createTerms = db.prepare(`
-    CREATE TABLE IF NOT EXISTS terms (
+        CREATE TABLE IF NOT EXISTS terms (
         id INTEGER PRIMARY KEY,
-        term TEXT NOT NULL,
-        doc_id INTEGER NOT NULL,
-        position INTEGER NOT NULL,
-        FOREIGN KEY(doc_id) REFERENCES documents(id)
+        term TEXT NOT NULL UNIQUE
     )
 `)
 
 const createPostings = db.prepare(`
     CREATE TABLE IF NOT EXISTS postings (
         id INTEGER PRIMARY KEY,
-        term_id INTEGER NOT NULL,
-        doc_id INTEGER NOT NULL,
-        position INTEGER NOT NULL,
-        FOREIGN KEY(term_id) REFERENCES terms(id),
-        FOREIGN KEY(doc_id) REFERENCES documents(id)
+        term_id INTEGER NOT NULL references terms(id),
+        doc_id INTEGER NOT NULL references documents(id),
+        frequency INTEGER NOT NULL,
+        positions TEXT,
+        UNIQUE(term_id, doc_id)
     )
 `)
 
