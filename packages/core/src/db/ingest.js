@@ -1,8 +1,7 @@
 import db from './db.js'
 import Indexer from '../tools/indexer.ts'
-import { braveNewWorld, ofMiceAndMen, ulysses } from '../text.ts'
+import { filesCorpus } from '../corpora/files.ts'
 
-const documents = [braveNewWorld, ofMiceAndMen, ulysses]
 const indexer = new Indexer();
 
 const ingestDocument = db.prepare(`
@@ -51,4 +50,18 @@ const ingestBatch = db.transaction((docs) => {
     }
 })
 
-ingestBatch(documents)
+async function ingest(corpus, batchSize = 500) {
+    let batch = []
+    for await (const doc of corpus.documents()) {
+        batch.push(doc)
+        if (batch.length >= batchSize) {
+            ingestBatch(batch)
+            batch = []
+        }
+    }
+    if (batch.length > 0) {
+        ingestBatch(batch)
+    }
+}
+
+await ingest(filesCorpus)
