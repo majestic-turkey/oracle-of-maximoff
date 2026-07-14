@@ -1,7 +1,5 @@
 import db from './db.js'
-import { braveNewWorld, ulysses, ofMiceAndMen } from '../text.ts'
 
-const documents = [braveNewWorld, ulysses, ofMiceAndMen]
 
 const createDocuments = db.prepare(`
     CREATE TABLE IF NOT EXISTS documents (
@@ -47,10 +45,3 @@ const addDocument = db.prepare(`
         meta = excluded.meta,
         token_count = excluded.token_count
 `)
-
-const documentBatch = db.transaction((docs) => {
-    for (const doc of docs) {
-        addDocument.run(doc.title, doc.body, doc.kind, doc.meta != null ? JSON.stringify(doc.meta) : null, doc.token_count ?? null, doc.id)
-    }
-})
-documentBatch(documents)

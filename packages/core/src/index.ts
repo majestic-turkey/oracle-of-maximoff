@@ -8,6 +8,6 @@ const [text1, text2, text3] = [ulysses, ofMiceAndMen, braveNewWorld]
 const indexer = new Indexer()
 
 
-setTimeout(() => console.log(indexer.buildIndex(indexer.analyze(text1), 1)), 2000)
-setTimeout(() => console.log(indexer.buildIndex(indexer.analyze(text2), 2)), 4000)
-setTimeout(() => console.log(indexer.buildIndex(indexer.analyze(text3), 3)), 6000)
+setTimeout(() => console.log(indexer.buildIndex(indexer.analyze(text1.body), 1)), 2000)
+setTimeout(() => console.log(indexer.buildIndex(indexer.analyze(text2.body), 2)), 4000)
+setTimeout(() => console.log(indexer.buildIndex(indexer.analyze(text3.body), 3)), 6000)
