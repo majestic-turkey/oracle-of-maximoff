@@ -5,3 +5,18 @@ const db = new Database(path.resolve(import.meta.dirname, '../../../../data/data
 db.pragma('journal_mode = WAL')
 db.pragma('foreign_keys = ON')
 export default db
+
+
+let statsQuery
+
+export function stats() {
+    if (!statsQuery) {
+        statsQuery = db.prepare(`
+            SELECT
+                (SELECT COUNT(*) FROM terms) AS termCount,
+                (SELECT COUNT(*) FROM postings) AS postingCount,
+                (SELECT AVG(token_count) FROM documents) AS avgDocLength
+        `)
+    }
+    return statsQuery.get()
+}

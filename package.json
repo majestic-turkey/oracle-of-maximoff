@@ -9,6 +9,7 @@
   "scripts": {
     "dev:web": "npm run dev -w apps/web",
     "dev:server": "npm run dev -w apps/server",
+    "ingest": "npm run ingest -w core",
     "build": "npm run build --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present"
   },
