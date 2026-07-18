@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "better-sqlite3": "^12.11.1",
-    "sax": "^1.6.0"
+    "sax": "^1.6.0",
+    "wikiparser-node": "^1.46.1"
   }
 }
