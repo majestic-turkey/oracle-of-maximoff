@@ -1,6 +1,7 @@
 import db from './db.js'
 import Indexer from '../tools/indexer.ts'
 import { filesCorpus } from '../corpora/files.ts'
+import { jsonlCorpus } from '../corpora/jsonlCorpus.ts'
 import { createSchema } from './schema.js'
 
 const indexer = new Indexer();
@@ -67,4 +68,4 @@ async function ingest(corpus, batchSize = 500) {
 
 createSchema()
 
-await ingest(filesCorpus)
+await ingest(jsonlCorpus)

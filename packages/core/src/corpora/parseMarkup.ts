@@ -6,6 +6,19 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { Doc } from '../types.ts'
 
+// Common Simple Wikipedia formatting templates. This parser has no access to
+// live template definitions, so unresolved they'd render as "Template:Name"
+// spliced directly into the surrounding word (e.g. "Lāna{{okina}}i").
+const characterTemplates = new Map([
+    ['Template:Okina', 'ʻ'],
+    ['Template:Ndash', '–'],
+    ['Template:Mdash', '—'],
+    ['Template:Nbsp', ' '],
+])
+for (const [title, replacement] of characterTemplates) {
+    Parser.templates.set(title, replacement)
+}
+
 const htmlToTextOptions = {
     selectors: [
         { selector: 'a', options: { ignoreHref: true } },

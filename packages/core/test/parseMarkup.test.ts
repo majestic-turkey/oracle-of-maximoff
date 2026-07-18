@@ -36,4 +36,10 @@ describe('wikitextToPlainText()', () => {
         assert.ok(!result.includes('/wiki/'))
         assert.ok(!result.includes('File:Example.jpg'))
     })
+
+    test('resolves known character templates instead of splicing "Template:Name" into the word', () => {
+        assert.equal(wikitextToPlainText("Lāna{{okina}}i").trim(), 'Lānaʻi')
+        assert.equal(wikitextToPlainText('Permian{{ndash}}Triassic').trim(), 'Permian–Triassic')
+        assert.ok(!wikitextToPlainText('Lāna{{okina}}i').includes('Template:'))
+    })
 })
