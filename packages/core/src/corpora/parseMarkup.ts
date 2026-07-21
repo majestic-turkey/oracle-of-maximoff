@@ -6,9 +6,6 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { Doc } from '../types.ts'
 
-// Common Simple Wikipedia formatting templates. This parser has no access to
-// live template definitions, so unresolved they'd render as "Template:Name"
-// spliced directly into the surrounding word (e.g. "Lāna{{okina}}i").
 const characterTemplates = new Map([
     ['Template:Okina', 'ʻ'],
     ['Template:Ndash', '–'],
@@ -31,6 +28,16 @@ export function wikitextToPlainText(wikitext: string): string {
     return convert(Parser.toHtml(wikitext), htmlToTextOptions)
 }
 
+
+export function parseDoc(doc: Doc): Doc {
+    try {
+        return { ...doc, body: wikitextToPlainText(doc.body) }
+    } catch (err) {
+        console.warn(`Failed to parse markup for ${doc.id} "${doc.title}": ${(err as Error).message}`)
+        return doc
+    }
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
     const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -41,11 +48,12 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 
     for await (const line of rlInterface) {
         const doc: Doc = JSON.parse(line)
-        doc.body = wikitextToPlainText(doc.body)
+        console.log(`Parsing doc: ${doc.title}`)
+        const parsed = parseDoc(doc)
 
         fs.appendFileSync(
             path.join(__dirname, '../../../../data/corpus/simplewiki_parsed.jsonl'),
-            JSON.stringify(doc) + '\n',
+            JSON.stringify(parsed) + '\n',
             { encoding: 'utf-8' }
         )
     }
