@@ -3,8 +3,6 @@ import Indexer from '../tools/indexer.ts'
 import { jsonlCorpus } from '../corpora/jsonlCorpus.ts'
 import { createSchema } from './schema.js'
 
-const indexer = new Indexer();
-
 const ingestDocument = db.prepare(`
     INSERT INTO documents (title, body, kind, meta, token_count, external_id)
     VALUES (?, ?, ?, ?, ?, ?)
@@ -34,6 +32,8 @@ const upsertTerm = db.prepare(`
 
 const ingestBatch = db.transaction((docs) => {
     for (const doc of docs) {
+        console.log(`Ingesting document ${doc.id}.${doc.title}`)
+        const indexer = new Indexer()
         const rawTokens = indexer.analyze(doc.body)
         const { id: docId } = ingestDocument.get(
             doc.title,
