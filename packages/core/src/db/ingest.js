@@ -1,6 +1,5 @@
 import db from './db.js'
 import Indexer from '../tools/indexer.ts'
-import { filesCorpus } from '../corpora/files.ts'
 import { jsonlCorpus } from '../corpora/jsonlCorpus.ts'
 import { createSchema } from './schema.js'
 
@@ -55,10 +54,14 @@ const ingestBatch = db.transaction((docs) => {
 async function ingest(corpus, batchSize = 500) {
     let batch = []
     for await (const doc of corpus.documents()) {
-        batch.push(doc)
-        if (batch.length >= batchSize) {
-            ingestBatch(batch)
-            batch = []
+        try {
+            batch.push(doc)
+            if (batch.length >= batchSize) {
+                ingestBatch(batch)
+                batch = []
+            }
+        } catch (error) {
+            console.error(`Error ingesting document with id ${doc.id}:`, error)
         }
     }
     if (batch.length > 0) {

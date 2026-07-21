@@ -3,14 +3,14 @@ import type { Token } from '../types.ts'
 
 // Deduplicate tokens and sort them alphabetically, while also collecting their positions in the text
 function groupAndSortTokens(tokens: TokenWithPosition[]): { token: string; positions: number[] }[] {
-    const index: { [token: string]: number[] } = {}
+    const index = new Map<string, number[]>()
     for (const { token, position } of tokens) {
-        if (!index[token]) {
-            index[token] = []
+        if (!index.has(token)) {
+            index.set(token, [])
         }
-        index[token].push(position)
+        index.get(token)!.push(position)
     }
-    return Object.entries(index).map(([token, positions]) => ({ token, positions })).sort((a, b) => a.token.localeCompare(b.token))
+    return Array.from(index.entries()).map(([token, positions]) => ({ token, positions })).sort((a, b) => a.token.localeCompare(b.token))
 }
 
 // Indexer class is responsible for inverse indexing of documents. It takes a document in the form of a string and creates an index that maps each unique word to the docID and positions that contain that word.
