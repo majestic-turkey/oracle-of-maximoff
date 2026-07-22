@@ -14,7 +14,7 @@ export default function analyze(text: string, willStem = true): {
     return stems
 }
 
-export function tokenize(text: string): {
+function tokenize(text: string): {
     token: string
     position: number
 }[] {
@@ -23,13 +23,13 @@ export function tokenize(text: string): {
     return tokens
 }
 
-export function filterStopwords(tokens: { token: string; position: number }[]): { token: string; position: number }[] {
-    return tokens.filter(({ token }) => !stopwords.includes(token.toLowerCase()))
+function filterStopwords(tokens: { token: string; position: number }[]): { token: string; position: number }[] {
+    return tokens.filter(({ token }) => !stopwords.includes(token.toLowerCase()) && token.trim().length > 0)
 }
 
 // Begin Stemmer logic
 
-export class Stemmer {
+class Stemmer {
     stem(word: string): string {
         if (word.length < 3) {
             return word.toLowerCase()
@@ -230,6 +230,8 @@ export class Stemmer {
         return word
     }
 }
+
+export { Stemmer, analyze, tokenize, filterStopwords }
 
 const stopwords = [
     "i",

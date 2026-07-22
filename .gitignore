@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 
 *.md
+
+/data
+*.txt

@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
-import analyze, { Stemmer, tokenize, filterStopwords } from '../src/nlp.ts'
+import { Stemmer, analyze, tokenize, filterStopwords } from '../src/tools/nlp.ts'
 
 const stemmer = new Stemmer()
 type StepFn = (w: string) => string

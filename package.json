@@ -9,13 +9,23 @@
   "scripts": {
     "dev:web": "npm run dev -w apps/web",
     "dev:server": "npm run dev -w apps/server",
+    "ingest": "npm run ingest -w core",
     "build": "npm run build --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present"
   },
   "devDependencies": {
+    "@types/html-to-text": "^9.0.4",
+    "@types/sax": "^1.2.7",
     "typescript": "~6.0.2"
   },
   "allowScripts": {
-    "esbuild@0.28.1": true
+    "esbuild@0.28.1": true,
+    "better-sqlite3@12.11.1": true
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "html-to-text": "^10.0.0",
+    "sax": "^1.6.0",
+    "wikiparser-node": "^1.46.1"
   }
 }

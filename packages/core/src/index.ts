@@ -1,6 +1,8 @@
-import analyze from './nlp.js'
+import Indexer from './tools/indexer.ts'
 
-export * from "./types.js"
-export * from "./nlp.js"
+export type { Corpus, Doc, Token } from './types.ts'
 
-console.log(analyze("The quick brown fox jumped over the lazy dog. The quicker brownest fox is jumping over the laziest of all cats.", true))
+const indexer = new Indexer()
+
+
+console.log(indexer.stats())
