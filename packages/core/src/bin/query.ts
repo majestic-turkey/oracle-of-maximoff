@@ -1,6 +1,7 @@
 import { parseArgs } from 'node:util'
 import analyze from '../tools/nlp.ts'
 import db from '../db/db.js'
+import { MinHeap } from './minHeap.ts'
 
 const { positionals, values } = parseArgs({
     args: process.argv.slice(2),
@@ -29,6 +30,7 @@ const queryScores = new Map<number, number>()
 
 const docCount = db.prepare('select count(*) as count from documents').get().count
 const avgDocLength = db.prepare('select avg(token_count) as avgdl from documents').get().avgdl
+const scoreHeap = new MinHeap<{ docId: number; score: number }>((a, b) => a.score - b.score) // Sort by score in ascending order
 
 for (const { token } of tokenizedQuery) {
     const rows = queryStatement.all(token)
