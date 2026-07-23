@@ -41,11 +41,13 @@ for (const { token } of tokenizedQuery) {
         const docLength = row.token_count
         const tf = row.frequency
         const termScore = idf * ((tf * (k1 + 1)) / (tf + k1 * (1 - b + b * (docLength / avgDocLength))))
-
-        queryScores.set(row.doc_id, (queryScores.get(row.doc_id) ?? 0) + termScore)
+        queryScores.set(row.doc_id, (queryScores.get(row.doc_id) || 0) + termScore)
     }
 }
-
 queryScores.forEach((score, docId) => {
-    console.log(`Doc ID: ${docId}, Score: ${score}`)
+    if (scoreHeap.getHeap().length < 25 || score > scoreHeap.peek()!.score) {
+        scoreHeap.insert({ docId, score })
+    }
 })
+
+console.log(scoreHeap.getHeap())

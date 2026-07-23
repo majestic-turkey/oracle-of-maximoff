@@ -75,4 +75,8 @@ export class MinHeap<T> {
             }
         }
     }
+
+    getHeap(): T[] {
+        return this.heap
+    }
 }
