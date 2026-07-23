@@ -49,5 +49,5 @@ queryScores.forEach((score, docId) => {
         scoreHeap.insert({ docId, score })
     }
 })
-
+scoreHeap.getHeap().sort((a, b) => b.score - a.score) // Sort in descending order
 console.log(scoreHeap.getHeap())
