@@ -41,6 +41,14 @@ export class MinHeap<T> {
         return min
     }
 
+    drain() {
+        const items: T[] = []
+        while (this.heap.length > 0) {
+            items.push(this.extractMin()!)
+        }
+        return items
+    }
+
     private heapUp(index: number) {
         let currentIndex = index
         while (currentIndex > 0) {

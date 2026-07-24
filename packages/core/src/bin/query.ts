@@ -3,6 +3,11 @@ import analyze from '../tools/nlp.ts'
 import db from '../db/db.js'
 import { MinHeap } from './minHeap.ts'
 
+interface DocRow {
+    id: number
+    title: string
+}
+
 const { positionals, values } = parseArgs({
     args: process.argv.slice(2),
     allowPositionals: true,
@@ -49,5 +54,17 @@ queryScores.forEach((score, docId) => {
         scoreHeap.insert({ docId, score })
     }
 })
-scoreHeap.getHeap().sort((a, b) => b.score - a.score) // Sort in descending order
-console.log(scoreHeap.getHeap())
+const sortedScores = scoreHeap.drain().reverse() // Sort in descending order
+
+const ids = sortedScores.map(({ docId }) => docId)
+const idPlaceholders = ids.map(() => '?').join(', ')
+const documentTitles = db.prepare(`select * from documents where id in (${idPlaceholders})`).all(...ids)
+const titlesById = new Map(documentTitles.map((doc: DocRow) => [doc.id, doc.title]))
+
+console.log('Top 25 results:')
+const results = sortedScores.map(({ docId, score }) => ({
+    id: docId,
+    title: titlesById.get(docId),
+    score,
+}))
+console.table(results)

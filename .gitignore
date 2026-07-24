@@ -27,3 +27,4 @@ dist-ssr
 
 /data
 *.txt
+*.tsbuildinfo
