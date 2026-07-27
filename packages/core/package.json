@@ -14,7 +14,8 @@
   "scripts": {
     "build": "tsc -b --force",
     "test": "node --test",
-    "ingest": "node src/db/ingest.js"
+    "ingest": "node src/db/ingest.js",
+    "query": "node src/bin/query.ts"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
