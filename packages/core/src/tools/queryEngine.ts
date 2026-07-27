@@ -19,8 +19,7 @@ interface PostingRow {
     token_count: number
 }
 
-// Minimal shape of what we need from a better-sqlite3 Database — kept loose
-// so tests can pass an in-memory instance without pulling in DB typings.
+// Minimal shape of what we need from a better-sqlite3 Database, avoiding pulling extra DB type defs
 interface QueryableDb {
     prepare(sql: string): {
         all(...params: unknown[]): unknown[]
@@ -28,7 +27,7 @@ interface QueryableDb {
     }
 }
 
-// Ranks documents against a query using BM25, returning the top `topK` by score (descending).
+// Ranks documents against a query using BM25, returning the top `topK` by score (descending)
 export function search(db: QueryableDb, query: string, options: SearchOptions = {}): ScoredDoc[] {
     const { k1 = 1.2, b = 0.75, topK = 25 } = options
 
