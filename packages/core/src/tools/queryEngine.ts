@@ -18,6 +18,7 @@ interface PostingRow {
     frequency: number
     doc_id: number
     token_count: number
+    positions: number[]
 }
 
 // Minimal shape of what we need from a better-sqlite3 Database, avoiding pulling extra DB type defs
@@ -35,7 +36,7 @@ export function search(db: QueryableDb, query: string, options: SearchOptions = 
     const tokenizedQuery = analyze(query)
 
     const queryStatement = db.prepare(`
-        select t.id, p.frequency, p.doc_id, d.token_count from terms t
+        select t.id, p.frequency, p.doc_id, d.token_count, p.positions from terms t
         join postings p on t.id = p.term_id
         join documents d on p.doc_id = d.id
         where t.term = ?
@@ -76,5 +77,6 @@ export function search(db: QueryableDb, query: string, options: SearchOptions = 
     return results.map((result) => ({
         ...result,
         title: titlesById.get(result.docId),
+        positions: (queryStatement.get(result.docId) as PostingRow)?.positions || [],
     }))
 }

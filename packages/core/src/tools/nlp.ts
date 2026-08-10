@@ -14,11 +14,17 @@ export default function analyze(text: string, willStem = true): {
     return stems
 }
 
+// Shared word-boundary regex: splits on any run of non-letter/non-number characters
+// (whitespace, punctuation, hyphens, apostrophes...). Positions stored in the index are
+// indices into this same splitting, so anything reconstructing text around a position
+// (e.g. snippet generation) must split with this regex too, not naive `.split(' ')`.
+export const WORD_SPLIT_REGEX = /[^\p{L}\p{N}]+/u
+
 function tokenize(text: string): {
     token: string
     position: number
 }[] {
-    const words = text.split(/[^\p{L}\p{N}]+/u)
+    const words = text.split(WORD_SPLIT_REGEX)
     const tokens = words.filter(word => word.trim().length > 0).map((word, index) => ({ token: word.toLowerCase().trim(), position: index }))
     return tokens
 }
