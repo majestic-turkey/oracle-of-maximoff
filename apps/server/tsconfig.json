@@ -14,7 +14,11 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "@db": ["../../packages/core/src/db/index.ts"],
+      "@db/*": ["../../packages/core/src/db/*"]
+    }
   },
   "include": ["src"],
   "references": [{ "path": "../../packages/core" }]

@@ -1,9 +1,9 @@
 import analyze from './nlp.ts'
 import { MinHeap } from './minHeap.ts'
+import type { ScoredDoc, DocRow } from '../types.ts'
 
-export interface ScoredDoc {
-    docId: number
-    score: number
+export interface SearchResult extends ScoredDoc {
+    title?: string
 }
 
 export interface SearchOptions {
@@ -11,6 +11,7 @@ export interface SearchOptions {
     b?: number
     topK?: number
 }
+
 
 interface PostingRow {
     id: number
@@ -27,8 +28,8 @@ interface QueryableDb {
     }
 }
 
-// Ranks documents against a query using BM25, returning the top `topK` by score (descending)
-export function search(db: QueryableDb, query: string, options: SearchOptions = {}): ScoredDoc[] {
+// Ranks documents against a query using BM25, returning the top 'topK' by score (descending)
+export function search(db: QueryableDb, query: string, options: SearchOptions = {}): SearchResult[] {
     const { k1 = 1.2, b = 0.75, topK = 25 } = options
 
     const tokenizedQuery = analyze(query)
@@ -59,12 +60,21 @@ export function search(db: QueryableDb, query: string, options: SearchOptions = 
         }
     }
 
-    const scoreHeap = new MinHeap<ScoredDoc>((a, c) => a.score - c.score, topK)
+    const scoreHeap = new MinHeap<SearchResult>((a, c) => a.score - c.score, topK)
     queryScores.forEach((score, docId) => {
         if (scoreHeap.getHeap().length < topK || score > scoreHeap.peek()!.score) {
             scoreHeap.insert({ docId, score })
         }
     })
 
-    return scoreHeap.drain().reverse()
+    const ids = scoreHeap.getHeap().map(({ docId }) => docId)
+    const idPlaceholders = ids.map(() => '?').join(', ')
+    const documentTitles = db.prepare(`select id, title from documents where id in (${idPlaceholders})`).all(...ids) as DocRow[]
+    const titlesById = new Map(documentTitles.map((doc) => [doc.id, doc.title]))
+
+    const results = scoreHeap.drain().reverse()
+    return results.map((result) => ({
+        ...result,
+        title: titlesById.get(result.docId),
+    }))
 }
