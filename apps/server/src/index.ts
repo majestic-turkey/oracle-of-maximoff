@@ -19,8 +19,14 @@ app.get("/api/search", (req, res) => {
   const query = req.query.q as string;
   const k1 = parseFloat((req.query.k1 as string) || "1.2");
   const b = parseFloat((req.query.b as string) || "0.75");
-  const results = search(db, query, { k1, b });
+  const topK = parseInt((req.query.topk as string) || "25", 10);
+  const results = search(db, query, { k1, b, topK });
   res.json({ results });
+});
+
+app.get("/", (_req, res) => {
+  // Serve index.html from ../../web/
+  res.sendFile("index.html", { root: "../web/" });
 });
 
 const port = process.env.PORT ?? 3001;
