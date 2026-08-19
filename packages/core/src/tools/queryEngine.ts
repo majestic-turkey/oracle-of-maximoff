@@ -5,6 +5,10 @@ import type { ScoredDoc } from '../types.ts'
 
 export interface SearchResult extends ScoredDoc {
     title?: string
+    // The corpus-assigned id ("simplewiki:1079341"). Unlike docId, which is a SQLite
+    // rowid and is reassigned when the index is rebuilt, this is stable across ingests -
+    // so it is what a client should link on or persist.
+    externalId?: string
     snippet: string
 }
 
@@ -30,6 +34,7 @@ interface DocTextRow {
     id: number
     title: string
     body: string
+    external_id: string
 }
 
 interface IndexStatsRow {
@@ -161,7 +166,7 @@ export function search(db: QueryableDb, query: string, options: SearchOptions = 
     // One trip for both the title and the body the snippet is cut from; the bodies of a
     // single page of results are cheap next to the postings scan above.
     const idPlaceholders = ids.map(() => '?').join(', ')
-    const documentRows = db.prepare(`select id, title, body from documents where id in (${idPlaceholders})`).all(...ids) as DocTextRow[]
+    const documentRows = db.prepare(`select id, title, body, external_id from documents where id in (${idPlaceholders})`).all(...ids) as DocTextRow[]
     const docsById = new Map(documentRows.map((doc) => [doc.id, doc]))
 
     return results.map((result) => {
@@ -170,6 +175,7 @@ export function search(db: QueryableDb, query: string, options: SearchOptions = 
         return {
             ...result,
             title: doc?.title,
+            externalId: doc?.external_id,
             snippet: buildSnippet(doc?.body ?? '', positions),
         }
     })

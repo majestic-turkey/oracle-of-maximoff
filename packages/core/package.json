@@ -9,13 +9,18 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./db": {
+      "types": "./dist/db/index.d.ts",
+      "default": "./dist/db/index.js"
     }
   },
   "scripts": {
     "build": "tsc -b --force",
     "test": "node --test",
     "ingest": "node src/db/ingest.js",
-    "query": "node src/bin/query.ts"
+    "query": "node src/bin/query.ts",
+    "build:watch": "tsc -b --watch"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",

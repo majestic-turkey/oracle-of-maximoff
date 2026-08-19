@@ -175,6 +175,20 @@ describe('search() — result ordering and topK', () => {
     })
 })
 
+describe('search() — result identity', () => {
+    // docId is a SQLite rowid and is reassigned by a rebuild; external_id is what
+    // survives one, so a client linking to a result needs it in the payload.
+    test('carries the stable external_id, not just the rowid', () => {
+        const db = createTestDb()
+        seedDocument(db, 'Whales', 'whale ocean deep blue current tide reef coral')
+
+        const [result] = search(db, 'whale')
+        const expected = db.prepare('select external_id from documents where id = ?').get(result.docId) as { external_id: string }
+
+        assert.equal(result.externalId, expected.external_id, `externalId: got ${JSON.stringify(result.externalId)}, expected ${JSON.stringify(expected.external_id)}`)
+    })
+})
+
 describe('search() — snippets', () => {
     const snippetOf = (results: ReturnType<typeof search>) => results[0]?.snippet
 
