@@ -12,11 +12,13 @@
     "dev:core": "npm run build:watch -w core",
     "ingest": "npm run ingest -w core",
     "build": "npm run build --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present"
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
   },
   "devDependencies": {
     "@types/html-to-text": "^9.0.4",
     "@types/sax": "^1.2.7",
+    "jsdom": "^27.4.0",
     "typescript": "~6.0.2"
   },
   "allowScripts": {
