@@ -29,12 +29,35 @@ interface DocTextRow {
     body: string
 }
 
+interface IndexStatsRow {
+    doc_count: number
+    total_tokens: number
+}
+
 // Minimal shape of what we need from a better-sqlite3 Database, avoiding pulling extra DB type defs
 interface QueryableDb {
     prepare(sql: string): {
         all(...params: unknown[]): unknown[]
         get(...params: unknown[]): unknown
     }
+}
+
+// The two corpus-wide numbers BM25 needs. Reads the counters the index_stats triggers
+// maintain; falls back to aggregating `documents` directly for databases indexed before
+// that table existed, which is correct but scans the whole table (bodies included).
+function readCorpusStats(db: QueryableDb): { docCount: number; avgDocLength: number | null } {
+    try {
+        const row = db.prepare('select doc_count, total_tokens from index_stats where id = 1').get() as IndexStatsRow | undefined
+        if (row && row.doc_count > 0) {
+            return { docCount: row.doc_count, avgDocLength: row.total_tokens / row.doc_count }
+        }
+    } catch {
+        // No index_stats table on this database - fall through to the direct aggregate.
+    }
+
+    const { count } = db.prepare('select count(*) as count from documents').get() as { count: number }
+    const { avgdl } = db.prepare('select avg(token_count) as avgdl from documents').get() as { avgdl: number | null }
+    return { docCount: count, avgDocLength: avgdl }
 }
 
 // Ranks documents against a query using BM25, returning the top 'topK' by score (descending)
@@ -50,8 +73,7 @@ export function search(db: QueryableDb, query: string, options: SearchOptions = 
         where t.term = ?
         `)
 
-    const docCount = (db.prepare('select count(*) as count from documents').get() as { count: number }).count
-    const avgDocLength = (db.prepare('select avg(token_count) as avgdl from documents').get() as { avgdl: number | null }).avgdl
+    const { docCount, avgDocLength } = readCorpusStats(db)
 
     const queryScores = new Map<number, number>()
     // Every position at which any query term hit a document, unioned across terms so the

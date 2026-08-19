@@ -6,8 +6,9 @@ import Indexer from '../src/tools/indexer.ts'
 import { search } from '../src/tools/queryEngine.ts'
 
 // Mirrors packages/core/src/db/schema.js — kept independent of that module
-// so these tests never touch the real on-disk database.
-function createTestDb() {
+// so these tests never touch the real on-disk database. `withIndexStats: false`
+// reproduces a database indexed before index_stats existed.
+function createTestDb({ withIndexStats = true } = {}) {
     const db = new Database(':memory:')
     db.exec(`
         CREATE TABLE documents (
@@ -32,6 +33,42 @@ function createTestDb() {
             UNIQUE(term_id, doc_id)
         );
     `)
+    if (withIndexStats) {
+        db.exec(`
+            CREATE TABLE index_stats (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                doc_count INTEGER NOT NULL DEFAULT 0,
+                total_tokens INTEGER NOT NULL DEFAULT 0
+            );
+            INSERT INTO index_stats (id, doc_count, total_tokens) VALUES (1, 0, 0);
+
+            CREATE TRIGGER index_stats_after_document_insert
+            AFTER INSERT ON documents
+            BEGIN
+                UPDATE index_stats
+                SET doc_count = doc_count + 1,
+                    total_tokens = total_tokens + COALESCE(NEW.token_count, 0)
+                WHERE id = 1;
+            END;
+
+            CREATE TRIGGER index_stats_after_document_update
+            AFTER UPDATE ON documents
+            BEGIN
+                UPDATE index_stats
+                SET total_tokens = total_tokens - COALESCE(OLD.token_count, 0) + COALESCE(NEW.token_count, 0)
+                WHERE id = 1;
+            END;
+
+            CREATE TRIGGER index_stats_after_document_delete
+            AFTER DELETE ON documents
+            BEGIN
+                UPDATE index_stats
+                SET doc_count = doc_count - 1,
+                    total_tokens = total_tokens - COALESCE(OLD.token_count, 0)
+                WHERE id = 1;
+            END;
+        `)
+    }
     return db
 }
 
@@ -223,5 +260,94 @@ describe('search() — snippets', () => {
         const expected = '… mu nu xi omicron pi **rho** **sigma** tau upsilon'
 
         assert.equal(actual, expected, `snippet: got ${JSON.stringify(actual)}, expected ${JSON.stringify(expected)}`)
+    })
+})
+
+describe('index_stats — corpus counters BM25 reads', () => {
+    const readStats = (db: Database.Database) =>
+        db.prepare('select doc_count, total_tokens from index_stats where id = 1').get() as {
+            doc_count: number
+            total_tokens: number
+        }
+
+    const directAggregate = (db: Database.Database) =>
+        db.prepare('select count(*) as doc_count, coalesce(sum(token_count), 0) as total_tokens from documents').get() as {
+            doc_count: number
+            total_tokens: number
+        }
+
+    const assertMatchesAggregate = (db: Database.Database, when: string) => {
+        const actual = readStats(db)
+        const expected = directAggregate(db)
+        assert.deepEqual(actual, expected, `${when}: got ${JSON.stringify(actual)}, expected ${JSON.stringify(expected)}`)
+    }
+
+    test('the insert trigger tracks doc_count and total_tokens as documents are indexed', () => {
+        const db = createTestDb()
+        seedDocument(db, 'Whales', 'whale ocean deep blue current tide reef coral')
+        seedDocument(db, 'Sharks', 'shark reef current tide')
+
+        assertMatchesAggregate(db, 'after two inserts')
+    })
+
+    test('the update trigger swaps the old token_count for the new one', () => {
+        const db = createTestDb()
+        const docId = seedDocument(db, 'Whales', 'whale ocean deep blue current tide reef coral')
+
+        db.prepare('update documents set token_count = ? where id = ?').run(3, docId)
+
+        assertMatchesAggregate(db, 'after shrinking a document')
+    })
+
+    test('the delete trigger removes the document from both counters', () => {
+        const db = createTestDb()
+        seedDocument(db, 'Whales', 'whale ocean deep blue current tide reef coral')
+        const docId = seedDocument(db, 'Sharks', 'shark reef current tide')
+
+        // postings has a foreign key onto documents, so its rows go first
+        db.prepare('delete from postings where doc_id = ?').run(docId)
+        db.prepare('delete from documents where id = ?').run(docId)
+
+        assertMatchesAggregate(db, 'after deleting one of two documents')
+    })
+
+    // Proves search() actually reads avgdl from index_stats rather than re-aggregating:
+    // a doctored total_tokens has to move the length-normalization term, and therefore
+    // the score, even though `documents` itself is untouched.
+    test('search() takes avgdl from index_stats, not from a scan of documents', () => {
+        const db = createTestDb()
+        seedDocument(db, 'Whales', 'whale ocean deep blue current tide reef coral')
+
+        const before = search(db, 'whale')[0].score
+        db.prepare('update index_stats set total_tokens = total_tokens * 4 where id = 1').run()
+        const after = search(db, 'whale')[0].score
+
+        assert.notEqual(after, before, `score with a quadrupled avgdl: got ${after}, expected something other than ${before}`)
+
+        // b=0 switches length normalization off entirely, so avgdl drops out of the
+        // formula and the doctored counter must stop mattering.
+        const unnormalizedBefore = search(db, 'whale', { b: 0 })[0].score
+        db.prepare('update index_stats set total_tokens = total_tokens * 7 where id = 1').run()
+        const unnormalizedAfter = search(db, 'whale', { b: 0 })[0].score
+
+        closeTo(unnormalizedAfter, unnormalizedBefore, 'score with b=0 is independent of avgdl')
+    })
+
+    // The simplewiki index predates index_stats and is too expensive to rebuild, so
+    // search() has to stay correct against a database that has no such table.
+    test('scores are identical on a database with no index_stats table', () => {
+        const withStats = createTestDb()
+        const withoutStats = createTestDb({ withIndexStats: false })
+        for (const db of [withStats, withoutStats]) {
+            seedDocument(db, 'Whales', 'whale whale ocean deep blue current tide reef coral')
+            seedDocument(db, 'Sharks', 'shark reef current tide wave surf blue deep')
+        }
+
+        const expected = search(withStats, 'whale')
+        const actual = search(withoutStats, 'whale')
+
+        assert.equal(actual.length, expected.length, `result count: got ${actual.length}, expected ${expected.length}`)
+        closeTo(actual[0].score, expected[0].score, 'fallback score')
+        assert.equal(actual[0].snippet, expected[0].snippet, `fallback snippet: got ${JSON.stringify(actual[0].snippet)}, expected ${JSON.stringify(expected[0].snippet)}`)
     })
 })
