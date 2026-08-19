@@ -176,3 +176,52 @@ describe('search() — result ordering and topK', () => {
         assert.equal(results.length, 2)
     })
 })
+
+describe('search() — snippets', () => {
+    const snippetOf = (results: ReturnType<typeof search>) => results[0]?.snippet
+
+    test('attaches a snippet with the matched term highlighted', () => {
+        const db = createTestDb()
+        seedDocument(db, 'Whales', 'whale ocean deep blue current tide reef coral')
+
+        const actual = snippetOf(search(db, 'current'))
+        const expected = 'whale ocean deep blue **current** tide reef coral'
+
+        assert.equal(actual, expected, `snippet: got ${JSON.stringify(actual)}, expected ${JSON.stringify(expected)}`)
+    })
+
+    // Stored positions index the raw word split, *before* stopwords are dropped. If they
+    // were ever recorded against the filtered token stream instead, the highlight would
+    // slide left by one word per preceding stopword and land on "jumps".
+    test('positions survive stopword filtering, so the highlight lands on the right word', () => {
+        const db = createTestDb()
+        seedDocument(db, 'Fox', 'the quick brown fox jumps over the lazy dog')
+
+        const actual = snippetOf(search(db, 'lazy'))
+        const expected = 'the quick brown fox jumps over the **lazy** dog'
+
+        assert.equal(actual, expected, `snippet: got ${JSON.stringify(actual)}, expected ${JSON.stringify(expected)}`)
+    })
+
+    // The index stores stems, the body stores prose: "run" matches the posting for
+    // "running", and the snippet must highlight the word as it actually appears.
+    test('a stemmed query term highlights the original inflected word in the body', () => {
+        const db = createTestDb()
+        seedDocument(db, 'Field', 'scientists were running quickly through the field')
+
+        const actual = snippetOf(search(db, 'run'))
+        const expected = 'scientists were **running** quickly through the field'
+
+        assert.equal(actual, expected, `snippet: got ${JSON.stringify(actual)}, expected ${JSON.stringify(expected)}`)
+    })
+
+    test('unions positions across query terms and windows on the cluster covering both', () => {
+        const db = createTestDb()
+        seedDocument(db, 'Greek', 'alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu xi omicron pi rho sigma tau upsilon')
+
+        const actual = snippetOf(search(db, 'rho sigma'))
+        const expected = '… mu nu xi omicron pi **rho** **sigma** tau upsilon'
+
+        assert.equal(actual, expected, `snippet: got ${JSON.stringify(actual)}, expected ${JSON.stringify(expected)}`)
+    })
+})

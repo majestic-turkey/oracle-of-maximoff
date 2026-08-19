@@ -19,9 +19,10 @@ const query = positionals.join(' ')
 const sortedScores = search(db, query, { k1, b })
 
 console.log('Top 25 results:')
-const results = sortedScores.map(({ docId, title, score }) => ({
+const results = sortedScores.map(({ docId, title, score, snippet }) => ({
     id: docId,
     title,
     score: parseFloat(score.toFixed(4)),
+    snippet,
 }))
 console.table(results)
