@@ -12,11 +12,13 @@
     "dev:core": "npm run build:watch -w core",
     "ingest": "npm run ingest -w core",
     "build": "npm run build --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present"
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
   },
   "devDependencies": {
     "@types/html-to-text": "^9.0.4",
     "@types/sax": "^1.2.7",
+    "jsdom": "^27.4.0",
     "typescript": "~6.0.2"
   },
   "allowScripts": {
@@ -26,7 +28,11 @@
   "dependencies": {
     "better-sqlite3": "^12.11.1",
     "html-to-text": "^10.0.0",
+    "marked": "^18.0.10",
     "sax": "^1.6.0",
     "wikiparser-node": "^1.46.1"
-  }
+  },
+    "overrides": {
+      "deepmerge-ts": "^8.0.0"
+    }
 }

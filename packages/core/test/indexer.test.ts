@@ -131,6 +131,10 @@ describe('Indexer — stats', () => {
     eq(call<{ avgDocLength: number }>(idx(), 'stats').avgDocLength, 2.5)
   })
 
+  test('stats().avgDocLength is 0 on a freshly-constructed Indexer (avoids a divide-by-zero)', () => {
+    eq(call<{ avgDocLength: number }>(new Indexer(), 'stats').avgDocLength, 0)
+  })
+
   test('docFrequency() counts documents containing a term (for IDF)', () => {
     const i = idx()
     eq(call(i, 'docFrequency', 'cat'), 2)

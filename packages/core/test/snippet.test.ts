@@ -22,6 +22,11 @@ describe('buildSnippet', () => {
     assert.equal(buildSnippet(body, []), '')
   })
 
+  test('returns empty string when the body has matched positions but no actual words', () => {
+    // e.g. a body that's gone empty/punctuation-only since the postings were indexed
+    assert.equal(buildSnippet('!!! ---', [0]), '')
+  })
+
   test('centers a window on the match and highlights it', () => {
     // "five" is at position 4
     const snippet = buildSnippet(body, [4], { radius: 2 })

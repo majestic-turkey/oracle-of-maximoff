@@ -37,6 +37,7 @@ describe('stem() — short-circuit & lowercasing', () => {
 describe('helpers (foundational)', () => {
   const measure = priv('measure')
   const cvc = priv('cvc')
+  const endsWithDoubleConsonant = priv('endsWithDoubleConsonant')
 
   describe('measure(m)', () => {
     for (const [word, m] of [
@@ -66,6 +67,29 @@ describe('helpers (foundational)', () => {
     })
     test('false when the pattern is not C-V-C', () => {
       cvcCase('fail', false)
+    })
+    test('false for words shorter than 3 characters (too short to have a C-V-C ending)', () => {
+      cvcCase('', false)
+      cvcCase('a', false)
+      cvcCase('ab', false)
+    })
+  })
+
+  describe('endsWithDoubleConsonant', () => {
+    const isDoubled = endsWithDoubleConsonant as unknown as (w: string) => boolean
+    const doubledCase = (word: string, expected: boolean) =>
+      assert.equal(isDoubled(word), expected, `endsWithDoubleConsonant(${word}): got ${isDoubled(word)}, expected ${expected}`)
+    test('true when the word ends in two identical consonants', () => {
+      doubledCase('hop', false)
+      doubledCase('hopp', true)
+      doubledCase('add', true)
+    })
+    test('false when the doubled letter is a vowel', () => {
+      doubledCase('agree', false)
+    })
+    test('false for words shorter than 2 characters (too short to double anything)', () => {
+      doubledCase('', false)
+      doubledCase('a', false)
     })
   })
 })
@@ -166,6 +190,9 @@ describe('step4', () => {
     ['homologous', 'homolog'],
     ['effective', 'effect'],
     ['bowdlerize', 'bowdler'],
+    // "ion" only strips when the remaining stem ends in "s" or "t" (e.g. "adoption" ->
+    // "adopt" above). "opin" ends in neither, so the suffix must be left in place.
+    ['opinion', 'opinion'],
   ])
 })
 

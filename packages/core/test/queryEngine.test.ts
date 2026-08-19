@@ -99,6 +99,19 @@ describe('search() — matching', () => {
         assert.equal(results.length, 1)
         assert.equal(results[0].docId, whaleDoc)
     })
+
+    // Deleting a document only cascades to its postings, never to `terms` - so a term
+    // whose one and only posting just got removed survives as a row with zero postings.
+    // The df === 0 guard exists precisely so that orphan isn't scored as a match.
+    test('a term orphaned by a document delete (row survives, no postings left) is not a match', () => {
+        const db = createTestDb()
+        const docId = seedDocument(db, 'Whales', 'whale ocean deep blue current tide reef coral')
+
+        db.prepare('delete from postings where doc_id = ?').run(docId)
+        db.prepare('delete from documents where id = ?').run(docId)
+
+        assert.deepEqual(search(db, 'whale'), [])
+    })
 })
 
 describe('search() — BM25 scoring matches the textbook formula', () => {
@@ -229,12 +242,45 @@ describe('search() — snippets', () => {
 
     test('unions positions across query terms and windows on the cluster covering both', () => {
         const db = createTestDb()
-        seedDocument(db, 'Greek', 'alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu xi omicron pi rho sigma tau upsilon')
+
+        // queryEngine calls buildSnippet with radius: 25 (a 51-word window), so the doc
+        // needs to be longer than that on both sides of the match for the window to
+        // actually clip rather than degrade into "just return the whole document".
+        const before = Array.from({ length: 30 }, (_, i) => `before${i}`)
+        const greek = 'alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu xi omicron pi rho sigma tau upsilon'.split(' ')
+        const after = Array.from({ length: 30 }, (_, i) => `after${i}`)
+        const words = [...before, ...greek, ...after]
+        seedDocument(db, 'Greek', words.join(' '))
 
         const actual = snippetOf(search(db, 'rho sigma'))
-        const expected = '… mu nu xi omicron pi **rho** **sigma** tau upsilon'
+
+        // rho/sigma sit at global indices 46/47 (30-word prefix + local 16/17). Centered
+        // with radius 25 and clamped to [0, words.length), that windows to [21, 72): the
+        // last 9 "before" words, the full greek run, and the first 22 "after" words.
+        const expectedWindow = words.slice(21, 72)
+        expectedWindow[46 - 21] = `**${expectedWindow[46 - 21]}**`
+        expectedWindow[47 - 21] = `**${expectedWindow[47 - 21]}**`
+        const expected = `… ${expectedWindow.join(' ')} …`
 
         assert.equal(actual, expected, `snippet: got ${JSON.stringify(actual)}, expected ${JSON.stringify(expected)}`)
+    })
+
+    // positions predates snippets on some rows: a posting written before that column
+    // existed leaves it NULL rather than '[]'. Scoring only reads frequency, so the match
+    // still counts - it's just the snippet that has nothing to highlight.
+    test('a NULL positions column (a posting written before snippets existed) degrades to no highlight, not a crash', () => {
+        const db = createTestDb()
+        seedDocument(db, 'Whales', 'whale ocean deep blue current tide reef coral')
+
+        db.prepare(`
+            update postings set positions = null
+            where term_id = (select id from terms where term = 'whale')
+        `).run()
+
+        const results = search(db, 'whale')
+
+        assert.equal(results.length, 1)
+        assert.equal(results[0].snippet, '', `snippet: got ${JSON.stringify(results[0].snippet)}, expected an empty string`)
     })
 })
 
