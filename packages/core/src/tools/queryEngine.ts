@@ -6,8 +6,7 @@ import type { ScoredDoc } from '../types.ts'
 export interface SearchResult extends ScoredDoc {
     title?: string
     // The corpus-assigned id ("simplewiki:1079341"). Unlike docId, which is a SQLite
-    // rowid and is reassigned when the index is rebuilt, this is stable across ingests -
-    // so it is what a client should link on or persist.
+    // rowid and is reassigned when the index is rebuilt, this is stable across ingests
     externalId?: string
     snippet: string
 }
@@ -42,7 +41,6 @@ interface IndexStatsRow {
     total_tokens: number
 }
 
-// Minimal shape of what we need from a better-sqlite3 Database, avoiding pulling extra DB type defs
 interface QueryableDb {
     prepare(sql: string): {
         all(...params: unknown[]): unknown[]
@@ -50,9 +48,7 @@ interface QueryableDb {
     }
 }
 
-// The two corpus-wide numbers BM25 needs. Reads the counters the index_stats triggers
-// maintain; falls back to aggregating `documents` directly for databases indexed before
-// that table existed, which is correct but scans the whole table (bodies included).
+
 function readCorpusStats(db: QueryableDb): { docCount: number; avgDocLength: number | null } {
     try {
         const row = db.prepare('select doc_count, total_tokens from index_stats where id = 1').get() as IndexStatsRow | undefined
@@ -68,33 +64,23 @@ function readCorpusStats(db: QueryableDb): { docCount: number; avgDocLength: num
     return { docCount: count, avgDocLength: avgdl }
 }
 
-// True when the database carries the narrow doc_lengths projection. Reading sqlite_master
-// is a lookup in the in-memory schema, not a table scan.
 function hasDocLengths(db: QueryableDb): boolean {
     return db.prepare("select 1 from sqlite_master where type = 'table' and name = 'doc_lengths'").get() !== undefined
 }
 
-// Scoring needs only doc_id, term frequency and document length. `positions` is left out
-// on purpose: it is needed for at most topK documents, but a common term matches tens of
-// thousands, and carrying that column widens every row read in the scan.
 function scoringSql(db: QueryableDb): string {
     return hasDocLengths(db)
         ? `select p.doc_id, p.frequency, l.token_count
            from postings p
            join doc_lengths l on p.doc_id = l.doc_id
            where p.term_id = ?`
-        // Databases indexed before doc_lengths existed still work, at the cost of a rowid
-        // lookup into the full-width documents row for every posting.
+
         : `select p.doc_id, p.frequency, d.token_count
            from postings p
            join documents d on p.doc_id = d.id
            where p.term_id = ?`
 }
 
-// Second pass, once the winners are known: the positions of every query term inside just
-// those documents, unioned per document so the snippet can favour a window covering
-// several of them. A Set because two query words can stem to the same term, which would
-// otherwise double-count a position and skew which window looks densest.
 function readMatchedPositions(db: QueryableDb, termIds: number[], docIds: number[]): Map<number, Set<number>> {
     const byDoc = new Map<number, Set<number>>()
     if (termIds.length === 0 || docIds.length === 0) return byDoc
@@ -176,7 +162,7 @@ export function search(db: QueryableDb, query: string, options: SearchOptions = 
             ...result,
             title: doc?.title,
             externalId: doc?.external_id,
-            snippet: buildSnippet(doc?.body ?? '', positions),
+            snippet: buildSnippet(doc?.body ?? '', positions, { radius: 10 }),
         }
     })
 }
