@@ -1,8 +1,3 @@
-import Indexer from './tools/indexer.ts'
-
 export type { Corpus, Doc, Token } from './types.ts'
-
-const indexer = new Indexer()
-
-
-console.log(indexer.stats())
+export { search } from './tools/queryEngine.ts'
+export type { SearchResult, SearchOptions } from './tools/queryEngine.ts'
