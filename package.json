@@ -26,6 +26,7 @@
   "dependencies": {
     "better-sqlite3": "^12.11.1",
     "html-to-text": "^10.0.0",
+    "marked": "^18.0.10",
     "sax": "^1.6.0",
     "wikiparser-node": "^1.46.1"
   }

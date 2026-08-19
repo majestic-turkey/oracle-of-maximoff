@@ -1,3 +1,4 @@
+import { marked } from 'marked'
 import { useState } from 'react'
 
 interface Result {
@@ -20,7 +21,7 @@ export default function SearchBar() {
             const resultElement = document.createElement('div')
             resultElement.innerHTML = `
                 <h3>${result.title}</h3>
-                <p>${result.snippet}</p>
+                <p>${marked.parse(result.snippet)}</p>
                 <a href="/document/${result.externalId}">View Document</a>
             `
             resultsDiv.appendChild(resultElement)

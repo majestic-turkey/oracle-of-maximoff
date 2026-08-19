@@ -162,7 +162,7 @@ export function search(db: QueryableDb, query: string, options: SearchOptions = 
             ...result,
             title: doc?.title,
             externalId: doc?.external_id,
-            snippet: buildSnippet(doc?.body ?? '', positions, { radius: 10 }),
+            snippet: buildSnippet(doc?.body ?? '', positions, { radius: 25 }),
         }
     })
 }
