@@ -3,8 +3,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import SearchBar from './SearchBar.tsx'
 
-// SearchBar renders results by hand-building innerHTML into #results rather than
-// through React state, so these tests read the real DOM back rather than props/state.
+// SearchBar renders results through React state and JSX.
 function mockFetchOnce(results: unknown[]) {
   return vi.fn().mockResolvedValue({ json: async () => ({ results }) })
 }
