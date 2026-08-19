@@ -4,69 +4,21 @@ import assert from 'node:assert/strict'
 import Database from 'better-sqlite3'
 import Indexer from '../src/tools/indexer.ts'
 import { search } from '../src/tools/queryEngine.ts'
+import { createSchema } from '../src/db/schema.js'
 
-// Mirrors packages/core/src/db/schema.js — kept independent of that module
-// so these tests never touch the real on-disk database. `withIndexStats: false`
-// reproduces a database indexed before index_stats existed.
+// Builds the real schema from src/db/schema.js against a throwaway :memory: database,
+// so these tests can never drift from the DDL that ingest actually runs. schema.js takes
+// a db handle precisely so importing it here does not open the on-disk index.
+// `withIndexStats: false` reproduces a database indexed before index_stats existed.
 function createTestDb({ withIndexStats = true } = {}) {
     const db = new Database(':memory:')
-    db.exec(`
-        CREATE TABLE documents (
-            id INTEGER PRIMARY KEY,
-            title TEXT NOT NULL,
-            body TEXT NOT NULL,
-            kind TEXT NOT NULL,
-            meta TEXT,
-            token_count INTEGER,
-            external_id TEXT NOT NULL UNIQUE
-        );
-        CREATE TABLE terms (
-            id INTEGER PRIMARY KEY,
-            term TEXT NOT NULL UNIQUE
-        );
-        CREATE TABLE postings (
-            id INTEGER PRIMARY KEY,
-            term_id INTEGER NOT NULL REFERENCES terms(id),
-            doc_id INTEGER NOT NULL REFERENCES documents(id),
-            frequency INTEGER NOT NULL,
-            positions TEXT,
-            UNIQUE(term_id, doc_id)
-        );
-    `)
-    if (withIndexStats) {
+    createSchema(db)
+    if (!withIndexStats) {
         db.exec(`
-            CREATE TABLE index_stats (
-                id INTEGER PRIMARY KEY CHECK (id = 1),
-                doc_count INTEGER NOT NULL DEFAULT 0,
-                total_tokens INTEGER NOT NULL DEFAULT 0
-            );
-            INSERT INTO index_stats (id, doc_count, total_tokens) VALUES (1, 0, 0);
-
-            CREATE TRIGGER index_stats_after_document_insert
-            AFTER INSERT ON documents
-            BEGIN
-                UPDATE index_stats
-                SET doc_count = doc_count + 1,
-                    total_tokens = total_tokens + COALESCE(NEW.token_count, 0)
-                WHERE id = 1;
-            END;
-
-            CREATE TRIGGER index_stats_after_document_update
-            AFTER UPDATE ON documents
-            BEGIN
-                UPDATE index_stats
-                SET total_tokens = total_tokens - COALESCE(OLD.token_count, 0) + COALESCE(NEW.token_count, 0)
-                WHERE id = 1;
-            END;
-
-            CREATE TRIGGER index_stats_after_document_delete
-            AFTER DELETE ON documents
-            BEGIN
-                UPDATE index_stats
-                SET doc_count = doc_count - 1,
-                    total_tokens = total_tokens - COALESCE(OLD.token_count, 0)
-                WHERE id = 1;
-            END;
+            DROP TRIGGER index_stats_after_document_insert;
+            DROP TRIGGER index_stats_after_document_update;
+            DROP TRIGGER index_stats_after_document_delete;
+            DROP TABLE index_stats;
         `)
     }
     return db
