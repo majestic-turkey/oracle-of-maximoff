@@ -31,5 +31,8 @@
     "marked": "^18.0.10",
     "sax": "^1.6.0",
     "wikiparser-node": "^1.46.1"
-  }
+  },
+    "overrides": {
+      "deepmerge-ts": "^8.0.0"
+    }
 }
