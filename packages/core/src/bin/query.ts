@@ -2,11 +2,6 @@ import { parseArgs } from 'node:util'
 import db from '../db/db.js'
 import { search } from '../tools/queryEngine.ts'
 
-interface DocRow {
-    id: number
-    title: string
-}
-
 const { positionals, values } = parseArgs({
     args: process.argv.slice(2),
     allowPositionals: true,
@@ -23,15 +18,11 @@ const query = positionals.join(' ')
 
 const sortedScores = search(db, query, { k1, b })
 
-const ids = sortedScores.map(({ docId }) => docId)
-const idPlaceholders = ids.map(() => '?').join(', ')
-const documentTitles = db.prepare(`select * from documents where id in (${idPlaceholders})`).all(...ids)
-const titlesById = new Map(documentTitles.map((doc: DocRow) => [doc.id, doc.title]))
-
 console.log('Top 25 results:')
-const results = sortedScores.map(({ docId, score }) => ({
+const results = sortedScores.map(({ docId, title, score, snippet }) => ({
     id: docId,
-    title: titlesById.get(docId),
-    score,
+    title,
+    score: parseFloat(score.toFixed(4)),
+    snippet,
 }))
 console.table(results)

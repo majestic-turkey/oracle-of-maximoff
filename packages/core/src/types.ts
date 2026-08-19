@@ -16,3 +16,13 @@ export interface Token {
   positions: number[]
   docId: number
 }
+
+export interface DocRow {
+    id: number
+    title: string
+}
+
+export interface ScoredDoc {
+    docId: number
+    score: number
+}

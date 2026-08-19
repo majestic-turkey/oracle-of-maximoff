@@ -69,6 +69,6 @@ async function ingest(corpus, batchSize = 500) {
     }
 }
 
-createSchema()
+createSchema(db)
 
 await ingest(jsonlCorpus)
