@@ -9,8 +9,9 @@ import { createSchema } from '../src/db/schema.js'
 // Builds the real schema from src/db/schema.js against a throwaway :memory: database,
 // so these tests can never drift from the DDL that ingest actually runs. schema.js takes
 // a db handle precisely so importing it here does not open the on-disk index.
-// `withIndexStats: false` reproduces a database indexed before index_stats existed.
-function createTestDb({ withIndexStats = true } = {}) {
+// `withIndexStats: false` / `withDocLengths: false` reproduce databases indexed before
+// those tables existed, which search() still has to serve correctly.
+function createTestDb({ withIndexStats = true, withDocLengths = true } = {}) {
     const db = new Database(':memory:')
     createSchema(db)
     if (!withIndexStats) {
@@ -19,6 +20,14 @@ function createTestDb({ withIndexStats = true } = {}) {
             DROP TRIGGER index_stats_after_document_update;
             DROP TRIGGER index_stats_after_document_delete;
             DROP TABLE index_stats;
+        `)
+    }
+    if (!withDocLengths) {
+        db.exec(`
+            DROP TRIGGER doc_lengths_after_document_insert;
+            DROP TRIGGER doc_lengths_after_document_update;
+            DROP TRIGGER doc_lengths_after_document_delete;
+            DROP TABLE doc_lengths;
         `)
     }
     return db
@@ -301,5 +310,63 @@ describe('index_stats — corpus counters BM25 reads', () => {
         assert.equal(actual.length, expected.length, `result count: got ${actual.length}, expected ${expected.length}`)
         closeTo(actual[0].score, expected[0].score, 'fallback score')
         assert.equal(actual[0].snippet, expected[0].snippet, `fallback snippet: got ${JSON.stringify(actual[0].snippet)}, expected ${JSON.stringify(expected[0].snippet)}`)
+    })
+})
+
+describe('doc_lengths — the narrow projection BM25 scores against', () => {
+    const assertMatchesDocuments = (db: Database.Database, when: string) => {
+        const actual = db.prepare('select doc_id, token_count from doc_lengths order by doc_id').all()
+        const expected = db.prepare('select id as doc_id, coalesce(token_count, 0) as token_count from documents order by id').all()
+        assert.deepEqual(actual, expected, `${when}: got ${JSON.stringify(actual)}, expected ${JSON.stringify(expected)}`)
+    }
+
+    test('a row appears for every indexed document', () => {
+        const db = createTestDb()
+        seedDocument(db, 'Whales', 'whale ocean deep blue current tide reef coral')
+        seedDocument(db, 'Sharks', 'shark reef current tide')
+
+        assertMatchesDocuments(db, 'after two inserts')
+    })
+
+    test('the update trigger follows a changed token_count', () => {
+        const db = createTestDb()
+        const docId = seedDocument(db, 'Whales', 'whale ocean deep blue current tide reef coral')
+
+        db.prepare('update documents set token_count = ? where id = ?').run(3, docId)
+
+        assertMatchesDocuments(db, 'after shrinking a document')
+    })
+
+    test('the delete trigger drops the row with its document', () => {
+        const db = createTestDb()
+        seedDocument(db, 'Whales', 'whale ocean deep blue current tide reef coral')
+        const docId = seedDocument(db, 'Sharks', 'shark reef current tide')
+
+        db.prepare('delete from postings where doc_id = ?').run(docId)
+        db.prepare('delete from documents where id = ?').run(docId)
+
+        assertMatchesDocuments(db, 'after deleting one of two documents')
+    })
+
+    // doc_lengths only changes which table the length is read from, never the value, so
+    // a database without it has to score and snippet identically - just more slowly.
+    test('scores and snippets are identical on a database with no doc_lengths table', () => {
+        const withTable = createTestDb()
+        const withoutTable = createTestDb({ withDocLengths: false })
+        for (const db of [withTable, withoutTable]) {
+            seedDocument(db, 'Short', 'whale reef coral')
+            seedDocument(db, 'Long', 'whale reef coral tide current blue deep ocean wave surf drift swell')
+            seedDocument(db, 'Both', 'whale whale reef coral tide current blue deep')
+        }
+
+        const expected = search(withTable, 'whale reef')
+        const actual = search(withoutTable, 'whale reef')
+
+        assert.equal(actual.length, expected.length, `result count: got ${actual.length}, expected ${expected.length}`)
+        for (let i = 0; i < expected.length; i++) {
+            assert.equal(actual[i].docId, expected[i].docId, `rank ${i} docId: got ${actual[i].docId}, expected ${expected[i].docId}`)
+            closeTo(actual[i].score, expected[i].score, `rank ${i} score`)
+            assert.equal(actual[i].snippet, expected[i].snippet, `rank ${i} snippet: got ${JSON.stringify(actual[i].snippet)}, expected ${JSON.stringify(expected[i].snippet)}`)
+        }
     })
 })
