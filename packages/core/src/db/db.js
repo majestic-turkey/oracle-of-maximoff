@@ -1,9 +1,15 @@
 import Database from 'better-sqlite3'
 import path from 'node:path'
+import { createSchema } from './schema.js'
 
 const db = new Database(path.resolve(import.meta.dirname, '../../../../data/database.sqlite'))
 db.pragma('journal_mode = WAL')
 db.pragma('foreign_keys = ON')
+
+if (!db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='documents'").get()) {
+    console.log('Creating database schema')
+    createSchema(db)
+}
 export default db
 
 

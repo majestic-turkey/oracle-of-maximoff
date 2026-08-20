@@ -1,7 +1,6 @@
 import db from './db.js'
 import Indexer from '../tools/indexer.ts'
 import { jsonlCorpus } from '../corpora/jsonlCorpus.ts'
-import { createSchema } from './schema.js'
 
 const ingestDocument = db.prepare(`
     INSERT INTO documents (title, body, kind, meta, token_count, external_id)
@@ -68,7 +67,5 @@ async function ingest(corpus, batchSize = 500) {
         ingestBatch(batch)
     }
 }
-
-createSchema(db)
 
 await ingest(jsonlCorpus)
