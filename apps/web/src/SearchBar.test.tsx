@@ -27,7 +27,7 @@ describe('SearchBar', () => {
     expect(input).toHaveValue('whales')
   })
 
-  test('clicking Search fetches /api/search with the URL-encoded query', async () => {
+  test('clicking Search fetches /api/search with URL-encoded query and topk', async () => {
     const user = userEvent.setup()
     vi.stubGlobal('fetch', mockFetchOnce([]))
     render(<SearchBar />)
@@ -35,7 +35,7 @@ describe('SearchBar', () => {
     await user.type(screen.getByPlaceholderText('Search...'), 'blue whale')
     await user.click(screen.getByRole('button', { name: /search/i }))
 
-    expect(fetch).toHaveBeenCalledWith('/api/search?q=blue%20whale')
+    expect(fetch).toHaveBeenCalledWith('/api/search?q=blue%20whale&topk=25')
   })
 
   test("renders each result's title, markdown-rendered snippet, and document link", async () => {
@@ -48,6 +48,7 @@ describe('SearchBar', () => {
     await user.click(screen.getByRole('button', { name: /search/i }))
 
     expect(await screen.findByRole('heading', { name: 'Whales', level: 3 })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /show snippet/i }))
     // The snippet is markdown ("**big**"), not plain text - confirm it actually
     // got parsed into a real <strong>, not dropped in as a literal asterisked string.
     expect(screen.getByText('big').tagName).toBe('STRONG')

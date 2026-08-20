@@ -1,7 +1,7 @@
-import { useState } from 'react'
-import ReactMarkdown from 'react-markdown'
+import { useRef, useState } from 'react'
+import Result from './Result.tsx'
 
-interface Result {
+export interface Result {
   title: string
   snippet: string
   externalId: string
@@ -10,11 +10,22 @@ interface Result {
 export default function SearchBar() {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Result[]>([])
+  const timeoutIdRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const handleSearch = async () => {
-    const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
+  const handleSearch = async (topK: number) => {
+    const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&topk=${topK}`)
     const { results } = await response.json()
     setResults(results)
+  }
+
+  const handleType = () => {
+    const delay = 100 // milliseconds
+    if (timeoutIdRef.current) {
+      clearTimeout(timeoutIdRef.current)
+    }
+    timeoutIdRef.current = setTimeout(() => {
+      handleSearch(5)
+    }, delay)
   }
 
   return (<>
@@ -23,17 +34,15 @@ export default function SearchBar() {
         type="text"
         placeholder="Search..."
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={(e) => {
+          setQuery(e.target.value)
+          handleType()}}
       />
-      <button onClick={handleSearch}>Search</button>
+      <button onClick={() => handleSearch(25)}>Search</button>
     </div>
     <div id="results">
       {results.map((result) => (
-        <div key={result.externalId}>
-          <h3>{result.title}</h3>
-          <ReactMarkdown>{result.snippet}</ReactMarkdown>
-          <a href={`/document/${result.externalId}`}>View Document</a>
-        </div>
+        <Result key={result.externalId} result={result} />
       ))}
     </div>
   </>)
