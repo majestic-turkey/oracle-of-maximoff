@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Result from './Result.tsx'
 
 export interface Result {
@@ -12,38 +12,53 @@ export default function SearchBar() {
   const [results, setResults] = useState<Result[]>([])
   const timeoutIdRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const handleSearch = async (topK: number) => {
-    const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&topk=${topK}`)
+  const handleSearch = async (topK: number, searchQuery: string) => {
+    const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}&topk=${topK}`)
     const { results } = await response.json()
     setResults(results)
   }
 
-  const handleType = () => {
+  useEffect(() => {
+    return () => {
+      if (timeoutIdRef.current) {
+        clearTimeout(timeoutIdRef.current)
+      }
+    }
+  }, [])
+
+  const handleType = (nextQuery: string) => {
     const delay = 100 // milliseconds
     if (timeoutIdRef.current) {
       clearTimeout(timeoutIdRef.current)
     }
     timeoutIdRef.current = setTimeout(() => {
-      handleSearch(5)
+      handleSearch(5, nextQuery)
     }, delay)
   }
 
-  return (<>
-    <div>
-      <input
-        type="text"
-        placeholder="Search..."
-        value={query}
-        onChange={(e) => {
-          setQuery(e.target.value)
-          handleType()}}
-      />
-      <button onClick={() => handleSearch(25)}>Search</button>
+  return (
+    <div className="search-panel">
+      <div className="search-input-row">
+        <input
+          className="search-input"
+          type="text"
+          placeholder="Search..."
+          value={query}
+          onChange={(e) => {
+            const nextQuery = e.target.value
+            setQuery(nextQuery)
+            handleType(nextQuery)
+          }}
+        />
+        <button className="search-button" onClick={() => handleSearch(25, query)}>
+          Search
+        </button>
+      </div>
+      <div id="results" className="results-list">
+        {results.map((result) => (
+          <Result key={result.externalId} result={result} />
+        ))}
+      </div>
     </div>
-    <div id="results">
-      {results.map((result) => (
-        <Result key={result.externalId} result={result} />
-      ))}
-    </div>
-  </>)
+  )
 }

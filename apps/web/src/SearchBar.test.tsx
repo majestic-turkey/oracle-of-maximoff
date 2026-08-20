@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import SearchBar from './SearchBar.tsx'
 
@@ -36,6 +36,24 @@ describe('SearchBar', () => {
     await user.click(screen.getByRole('button', { name: /search/i }))
 
     expect(fetch).toHaveBeenCalledWith('/api/search?q=blue%20whale&topk=25')
+  })
+
+  test('debounced typing searches with the current query instead of the previous one', async () => {
+    vi.useFakeTimers()
+    vi.stubGlobal('fetch', mockFetchOnce([]))
+    render(<SearchBar />)
+
+    const input = screen.getByPlaceholderText('Search...')
+    fireEvent.change(input, { target: { value: 'w' } })
+    vi.advanceTimersByTime(100)
+
+    expect(fetch).toHaveBeenCalledWith('/api/search?q=w&topk=5')
+
+    fireEvent.change(input, { target: { value: 'wh' } })
+    vi.advanceTimersByTime(100)
+
+    expect(fetch).toHaveBeenCalledWith('/api/search?q=wh&topk=5')
+    vi.useRealTimers()
   })
 
   test("renders each result's title, markdown-rendered snippet, and document link", async () => {
