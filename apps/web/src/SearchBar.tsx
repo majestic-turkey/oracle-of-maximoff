@@ -10,12 +10,17 @@ export interface Result {
 export default function SearchBar() {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Result[]>([])
+  const [elapsed, setElapsed] = useState<number | null>(null)
   const timeoutIdRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleSearch = async (topK: number, searchQuery: string) => {
+    const before = performance.now()
     const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}&topk=${topK}`)
     const { results } = await response.json()
+    const after = performance.now()
+    const elapsed = after - before
     setResults(results)
+    setElapsed(elapsed)
   }
 
   useEffect(() => {
@@ -59,6 +64,7 @@ export default function SearchBar() {
           <Result key={result.externalId} result={result} />
         ))}
       </div>
+      <p className="search-elapsed-time">Search took: {elapsed?.toFixed(2)} ms</p>
     </div>
   )
 }
